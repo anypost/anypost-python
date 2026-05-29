@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "anypost"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Official Python SDK for the Anypost email API."
 readme = "README.md"
 license = { text = "MIT" }
@@ -41,6 +41,10 @@ dev = [
   "mypy>=1.8",
   "ruff>=0.4",
 ]
+
+[tool.hatch.version]
+# Single source of truth: anypost.__version__.
+path = "src/anypost/_version.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/anypost"]
