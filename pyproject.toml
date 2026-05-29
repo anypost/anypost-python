@@ -1,0 +1,73 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "anypost"
+version = "0.1.0"
+description = "Official Python SDK for the Anypost email API."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+authors = [{ name = "Anypost" }]
+keywords = ["anypost", "email", "transactional-email", "smtp", "api"]
+classifiers = [
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Typing :: Typed",
+]
+dependencies = [
+  "httpx>=0.25",
+  "typing_extensions>=4.5",
+]
+
+[project.urls]
+Homepage = "https://anypost.com"
+Documentation = "https://anypost.com/docs"
+Repository = "https://github.com/anypost/anypost-python"
+Issues = "https://github.com/anypost/anypost-python/issues"
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "pytest-asyncio>=0.23",
+  "mypy>=1.8",
+  "ruff>=0.4",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/anypost"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/anypost", "README.md", "LICENSE"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.mypy]
+strict = true
+# Lowest version this mypy build targets; runtime 3.9 compatibility is ensured
+# by using typing.List/Optional (not builtin generics or X | None) throughout.
+python_version = "3.10"
+files = ["src/anypost"]
+# The HTTP layer decodes untyped JSON (legitimately Any); each resource
+# annotates the real response contract on top of it.
+warn_return_any = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+# No "UP" (pyupgrade): functional TypedDicts evaluate their type expressions at
+# runtime, and "X | None" is a runtime error before Python 3.10 — so typing.List
+# / Optional are used uniformly and must not be rewritten to builtin generics.
+select = ["E", "F", "I", "B"]
