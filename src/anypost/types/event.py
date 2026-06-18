@@ -23,6 +23,31 @@ EventType = Literal[
 ]
 
 
+class EventBot(TypedDict):
+    """Bot classification for a proxied open or click.
+
+    Pure-noise machine traffic (mailbox prefetchers, scanners) never becomes
+    an event, so the only kind a customer ever sees is ``proxy`` — a real open
+    whose origin is anonymized by a mailbox image proxy (Gmail, Yahoo, etc.).
+    """
+
+    #: The detected mailbox image proxy, e.g. ``google``, ``yahoo``, ``bing``.
+    source: str
+    #: Always ``proxy`` on customer-visible events.
+    kind: Literal["proxy"]
+
+
+class EventTracking(TypedDict, total=False):
+    """Tracking metadata on ``email.opened`` / ``email.clicked`` events.
+
+    Mirrors the webhook payload's ``data.tracking``. Carries ``bot`` only when
+    the interaction came from a mailbox image proxy; a human open/click has no
+    ``bot``.
+    """
+
+    bot: EventBot
+
+
 #: A single email-pipeline event for the team.
 #:
 #: Every field is always present; fields that don't apply to a given event
@@ -64,6 +89,10 @@ Event = TypedDict(
         "bounce_classification": Optional[str],
         # Delivery attempt number for this recipient. None for non-delivery events.
         "attempt": Optional[int],
+        # Tracking metadata, mirroring the webhook payload's data.tracking. None
+        # on every event except opens/clicks, and on human opens/clicks. Carries
+        # bot when the open/click came from a mailbox image proxy.
+        "tracking": Optional[EventTracking],
     },
 )
 

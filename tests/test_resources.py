@@ -33,6 +33,33 @@ def test_domains_crud_and_verify() -> None:
     assert (rec.last.method, rec.last.url.path) == ("DELETE", "/v1/domains/domain_1")
 
 
+def test_events_expose_bot_on_proxied_open() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return json_response(
+            200,
+            {
+                "data": [
+                    {
+                        "id": "evt_bot",
+                        "type": "email.opened",
+                        "tracking": {"bot": {"source": "google", "kind": "proxy"}},
+                    },
+                    {"id": "evt_human", "type": "email.opened", "tracking": None},
+                ],
+                "has_more": False,
+                "next_cursor": None,
+            },
+        )
+
+    client, _ = make_client(handler)
+    page = client.events.list({"event_type": "email.opened"})
+
+    bot = page.data[0]["tracking"]["bot"]
+    assert (bot["source"], bot["kind"]) == ("google", "proxy")
+    # A human open carries no bot classification.
+    assert page.data[1]["tracking"] is None
+
+
 def test_template_draft_publish_flow() -> None:
     client, rec = make_client(echo)
 
