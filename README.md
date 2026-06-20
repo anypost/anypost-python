@@ -4,6 +4,8 @@ The official Python client for the [Anypost](https://anypost.com) email API.
 
 Requires Python 3.9+. Built on [httpx](https://www.python-httpx.org/), with sync and async clients.
 
+This README covers the SDK itself: installation, idioms, and configuration. For platform concepts and the full field-level API reference, see the [Anypost documentation](https://anypost.com/docs).
+
 ## Install
 
 ```bash
@@ -18,10 +20,10 @@ from anypost import Anypost
 client = Anypost("ap_your_api_key")
 
 result = client.email.send({
-    "from": "Acme <you@yourdomain.com>",
-    "to": ["someone@example.com"],
-    "subject": "Hello from Anypost",
-    "html": "<p>It worked.</p>",
+    "from": "YourCo <you@yourdomain.com>",
+    "to": ["you@example.com"],
+    "subject": "Welcome to Anypost",
+    "html": "<p>Hello, inbox!</p>",
 })
 print(result["id"])
 ```
@@ -34,11 +36,11 @@ client = Anypost()
 
 Keep the key server-side. It is a bearer credential; never ship it to a browser or mobile app.
 
-Request bodies are plain dicts that match the API one-to-one — including the `"from"` key, which a dict literal accepts even though `from` is a reserved word. Responses are dicts too, typed with `TypedDict` for editor autocomplete.
+Request bodies are plain dicts that match the API one-to-one, including the `"from"` key, which a dict literal accepts even though `from` is a reserved word. Responses are dicts too, typed with `TypedDict` for editor autocomplete.
 
 ## Async
 
-Every operation has an async twin on `AsyncAnypost`. Same methods, same shapes — `await` them, and iterate pages with `async for`.
+Every operation has an async twin on `AsyncAnypost`. Same methods, same shapes: `await` them, and iterate pages with `async for`.
 
 ```python
 import asyncio
@@ -47,10 +49,10 @@ from anypost import AsyncAnypost
 async def main():
     async with AsyncAnypost("ap_your_api_key") as client:
         result = await client.email.send({
-            "from": "Acme <you@yourdomain.com>",
-            "to": ["someone@example.com"],
-            "subject": "Hello",
-            "html": "<p>It worked.</p>",
+            "from": "YourCo <you@yourdomain.com>",
+            "to": ["you@example.com"],
+            "subject": "Welcome to Anypost",
+            "html": "<p>Hello, inbox!</p>",
         })
         print(result["id"])
 
@@ -65,7 +67,7 @@ One of `text`, `html`, or `template_id` is required. All recipients in `to`, `cc
 
 ```python
 client.email.send({
-    "from": "Acme <you@yourdomain.com>",
+    "from": "YourCo <you@yourdomain.com>",
     "to": ["a@example.com", "b@example.com"],
     "cc": ["team@example.com"],
     "reply_to": "support@yourdomain.com",
@@ -82,7 +84,7 @@ Pass attachment `content` as raw `bytes` and the client base64-encodes it; pass 
 from pathlib import Path
 
 client.email.send({
-    "from": "you@yourdomain.com",
+    "from": "YourCo <you@yourdomain.com>",
     "to": ["someone@example.com"],
     "subject": "Your report",
     "text": "Attached.",
@@ -96,12 +98,14 @@ Send with a published template and per-recipient variables:
 
 ```python
 client.email.send({
-    "from": "you@yourdomain.com",
+    "from": "YourCo <you@yourdomain.com>",
     "to": ["someone@example.com"],
     "template_id": "template_018f2c5e-3a40-7a91-9c25-3a0b1d5e6f78",
     "variables": {"name": "Ada", "plan": "pro"},
 })
 ```
+
+See the [send reference](https://anypost.com/docs/reference/emails) for the complete field list.
 
 ## Batch
 
@@ -109,7 +113,7 @@ Send 1 to 100 independent messages in one request. `defaults` fills any field an
 
 ```python
 result = client.email.send_batch({
-    "defaults": {"from": "you@yourdomain.com"},
+    "defaults": {"from": "YourCo <you@yourdomain.com>"},
     "emails": [
         {"to": ["a@example.com"], "subject": "Hi A", "text": "..."},
         {"to": ["b@example.com"], "subject": "Hi B", "text": "..."},
@@ -131,31 +135,21 @@ for entry in result["data"]:
 
 ## Domains
 
-Manage sending domains under `client.domains`. Add a domain, publish the CNAMEs it returns, then verify.
+Manage sending domains under `client.domains`. Add a domain, publish the DNS records it returns, then verify.
 
 ```python
 domain = client.domains.create({"name": "example.com"})
 
 for record in domain["dns_records"]:
     print(record["type"], record["name"], "->", record["value"])
-```
 
-`verify` always returns the current domain — a still-`pending` domain does not raise. Read `status` and `verification_failure`, and poll while DNS propagates.
-
-```python
 checked = client.domains.verify(domain["id"])
 if checked["status"] != "verified":
+    # verify returns the current domain even while pending; it never raises
     print(checked["verification_failure"])
 ```
 
-`get`, `update` (tracking config only), and `delete` round out the resource:
-
-```python
-client.domains.update(domain["id"], {
-    "tracking": {"opens_enabled": True, "clicks_enabled": True, "subdomain": "track"},
-})
-client.domains.delete(domain["id"])
-```
+`get`, `update` (tracking config only), and `delete` round out the resource. See [Domains](https://anypost.com/docs/reference/domains) for the verification lifecycle and field reference.
 
 ## API keys
 
@@ -168,12 +162,9 @@ created = client.api_keys.create({
     "allowed_domains": ["example.com"],
 })
 print(created["key"])  # store now; never retrievable again
-
-client.api_keys.update(created["id"], {"name": "Production server", "permissions": "full"})
-client.api_keys.delete(created["id"])
 ```
 
-`get` returns metadata only — `key_prefix`, never the secret. Permission and restriction changes take up to 5 minutes to propagate through the gateway cache.
+`get` returns metadata only (`key_prefix`, never the secret); `update` and `delete` round out the resource. See [API keys](https://anypost.com/docs/reference/api-keys) for the permission model and cache propagation.
 
 ## Templates
 
@@ -186,18 +177,14 @@ template = client.templates.create({
     "html": "<h1>Welcome, {{ name }}</h1>",
 })
 
-client.templates.update_draft(template["id"], {
-    "subject": "Welcome to Acme",
-    "html": "<h1>Welcome, {{ name }}</h1>",
-})
 client.templates.publish(template["id"])
 ```
 
-`kind` is `html` or `markdown` and is immutable once set. The plain-text body is always derived server-side. `get_draft`, `delete_draft`, `duplicate`, `get`, `update` (name only), and `delete` round out the resource. Send with a published template via `template_id` (see [Sending](#sending)).
+`kind` (`html` or `markdown`) is immutable once set; the plain-text body is always derived server-side. `get_draft`, `update_draft`, `delete_draft`, `duplicate`, `get`, `update` (name only), and `delete` round out the resource. Send a published template with `template_id` (see [Sending](#sending)). See [Templates](https://anypost.com/docs/reference/templates) for the full model.
 
 ## Suppressions
 
-A suppression blocks sends to an address, scoped to a `topic`. The wildcard `*` blocks every topic; a specific topic (e.g. `marketing`) leaves transactional traffic untouched. Bounces and complaints write `*` automatically.
+A suppression blocks sends to an address, scoped to a `topic`. The wildcard `*` blocks every topic; a named topic (e.g. `marketing`) leaves transactional traffic untouched.
 
 ```python
 client.suppressions.create({
@@ -206,16 +193,10 @@ client.suppressions.create({
     "note": "Customer requested removal",
 })
 
-row = client.suppressions.get("alice@example.com", "*")
 client.suppressions.delete("alice@example.com", "marketing")
 ```
 
-`list` accepts `email_contains`, `topic`, `reason`, and `origin` filters. `list_for_email` returns every row for an address across all topics; `delete_for_email` removes them all.
-
-```python
-for s in client.suppressions.list({"reason": "complaint"}):
-    print(s["email"], s["topic"], s["suppressed_at"])
-```
+`get`, `list` (with `email_contains`, `topic`, `reason`, and `origin` filters), `list_for_email`, and `delete_for_email` round out the resource. See [Suppressions](https://anypost.com/docs/reference/suppressions) for scoping and the automatic-suppression rules for bounces and complaints.
 
 ## Webhooks
 
@@ -230,19 +211,11 @@ webhook = client.webhooks.create({
 print(webhook["signing_secret"])  # store now; never retrievable again
 ```
 
-`update` sets the name, URL, events, and `status` together — set `status` to `"disabled"` to pause delivery, `"active"` to resume. `test` sends one synthetic `webhook.test` event and returns the outcome even when the endpoint fails. `rotate_secret` issues a new secret and keeps the previous one valid for a 24-hour grace window; `get`, `list`, and `delete` round out the resource.
-
-```python
-result = client.webhooks.test(webhook["id"])
-if not result["delivered"]:
-    print(result["status_code"], result["error"])
-
-rotated = client.webhooks.rotate_secret(webhook["id"])
-```
+`update`, `test`, `rotate_secret`, `get`, `list`, and `delete` round out the resource. See [Webhooks](https://anypost.com/docs/reference/webhooks) for the event catalog, status transitions, and the secret-rotation grace window.
 
 ### Verifying deliveries
 
-`verify_webhook_signature` is a standalone function — it needs the signing secret, not an API key, so call it in your handler without a client. Pass the **raw** request body (the exact bytes, before JSON parsing), the `Anypost-Signature` header, and the secret. It returns on success and raises `WebhookVerificationError` otherwise. `unwrap_webhook_event` does the same and returns the parsed delivery.
+`verify_webhook_signature` is a standalone function. It needs the signing secret, not an API key, so call it in your handler without a client. Pass the **raw** request body (the exact bytes, before JSON parsing), the `Anypost-Signature` header, and the secret. It returns on success and raises `WebhookVerificationError` otherwise. `unwrap_webhook_event` does the same and returns the parsed delivery.
 
 ```python
 from anypost import unwrap_webhook_event, WebhookVerificationError
@@ -273,30 +246,22 @@ async def anypost_webhook(request):
     return Response(status_code=204)
 ```
 
-Deliveries older than five minutes are rejected by default to bound replay; pass `tolerance_seconds` to widen, narrow, or disable (`0`) that check. During a secret rotation the header carries a `v1=` component per active secret, and a match on any one passes — so deliveries keep verifying while you redeploy.
+Deliveries older than five minutes are rejected by default to bound replay; pass `tolerance_seconds` to widen, narrow, or disable (`0`) that check. During a secret rotation the header carries a `v1=` component per active secret, and a match on any one passes, so deliveries keep verifying while you redeploy.
 
 ## Events
 
-`client.events.list` pages the team's event stream, newest-first. The window defaults to the last 24 hours and is clamped to your plan's retention. Events are read-only and not addressable by id — there is no `get`.
+`client.events.list` pages the team's event stream, newest-first. The window defaults to the last 24 hours and is clamped to your plan's retention. Events are read-only and not addressable by id, so there is no `get`.
 
 ```python
 for event in client.events.list({"event_type": "email.bounced"}):
     print(event["occurred_at"], event["recipient"], event["bounce_classification"])
 ```
 
-Filter by `start`, `end`, `event_type`, `recipient`, `email_id`, `message_id`, `domain`, `topic`, `campaign`, `template_id`, and `tags`. All filters are exact-match, except `tags`, which takes a list and matches an event carrying *any* of the given tags. A filter value that matches no row returns an empty page. This is also how you backfill the gap after a webhook endpoint was disabled — page the events that occurred during the outage once it's healthy.
-
-```python
-# Events tagged "onboarding" OR "welcome", that also bounced.
-page = client.events.list({
-    "tags": ["onboarding", "welcome"],
-    "event_type": "email.bounced",
-})
-```
+Filter by `start`, `end`, `event_type`, `recipient`, `email_id`, `message_id`, `domain`, `topic`, `campaign`, `template_id`, and `tags`, a list that matches an event carrying *any* of the given tags. Every other filter is exact-match. This is also how you backfill the gap after a webhook endpoint was disabled: page the events that occurred during the outage once it's healthy. See [Events](https://anypost.com/docs/reference/events) for the field reference.
 
 ## Pagination
 
-List endpoints return a `Page`. Read one page directly, or iterate it to walk every page — the client fetches each one as needed.
+List endpoints return a `Page`. Read one page directly, or iterate it to walk every page; the client fetches each one as needed.
 
 ```python
 page = client.domains.list({"limit": 50})
@@ -338,7 +303,7 @@ except AnypostError as err:
 | `AuthenticationError` | `authentication_error` | `401` |
 | `PermissionError` | `permission_error` | `403` |
 | `NotFoundError` | `not_found` | `404` |
-| `ConflictError` | `idempotency_concurrent`, `webhook_rotation_in_progress` | `409` |
+| `ConflictError` | `conflict`, `idempotency_concurrent`, `webhook_rotation_in_progress` | `409` |
 | `IdempotencyMismatchError` | `idempotency_mismatch` | `422` |
 | `RateLimitError` | `rate_limit_exceeded` | `429` |
 | `PayloadTooLargeError` | `payload_too_large` | `413` |
