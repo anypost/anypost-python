@@ -44,6 +44,14 @@ EmailSendParams = TypedDict(
         "campaign": str,
         # Suppression scope / topic bucket ([a-z0-9_.-]{1,64}).
         "topic": str,
+        # Which of your dedicated IP pools this message sends from
+        # ([a-z0-9]([a-z0-9-]*[a-z0-9])?, <= 32 chars). Accounts with dedicated
+        # IPs and more than one named pool only. Not a reporting label like
+        # tags/topic/campaign - it changes how the message is delivered,
+        # keeping one stream's reputation and queueing off another's. Omit to
+        # use the account's default pool; an unrecognized name returns 422
+        # listing the pools the account does have.
+        "ip_pool": str,
         "tracking": Tracking,
         # Handlebars substitution map. Encoded JSON must be <= 64 KB.
         "variables": Dict[str, Any],
@@ -71,6 +79,7 @@ EmailBatchDefaults = TypedDict(
         "tags": List[str],
         "campaign": str,
         "topic": str,
+        "ip_pool": str,
         "tracking": Tracking,
         "variables": Dict[str, Any],
         "unsubscribe": Unsubscribe,

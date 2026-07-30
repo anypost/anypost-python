@@ -60,6 +60,35 @@ def test_events_expose_bot_on_proxied_open() -> None:
     assert page.data[1]["tracking"] is None
 
 
+def test_events_thread_every_filter_into_the_query_string() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return json_response(200, {"data": [], "has_more": False, "next_cursor": None})
+
+    client, rec = make_client(handler)
+    client.events.list(
+        {
+            "event_type": "email.bounced",
+            "recipient": "alex@customer.com",
+            "domain": "example.com",
+            "topic": "marketing",
+            "campaign": "spring_promo_2026",
+            "template_id": "template_019e2d74",
+            "ip_pool": "marketing",
+            "tags": ["onboarding", "welcome"],
+        }
+    )
+
+    query = rec.last.url.params
+    assert query["event_type"] == "email.bounced"
+    assert query["recipient"] == "alex@customer.com"
+    assert query["domain"] == "example.com"
+    assert query["topic"] == "marketing"
+    assert query["campaign"] == "spring_promo_2026"
+    assert query["template_id"] == "template_019e2d74"
+    assert query["ip_pool"] == "marketing"
+    assert query["tags"] == "onboarding,welcome"
+
+
 def test_template_draft_publish_flow() -> None:
     client, rec = make_client(echo)
 

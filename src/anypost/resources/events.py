@@ -21,7 +21,7 @@ class Events:
         The window defaults to the last 24 hours and is clamped to the plan's
         retention. Filter with ``start``, ``end``, ``event_type``,
         ``recipient``, ``email_id``, ``message_id``, ``domain``, ``topic``,
-        ``campaign``, ``template_id``, and ``tags``.
+        ``campaign``, ``template_id``, ``ip_pool``, and ``tags``.
         """
         return self._fetch_page(params)
 
@@ -44,6 +44,7 @@ class Events:
                 "topic": params.get("topic"),
                 "campaign": params.get("campaign"),
                 "template_id": params.get("template_id"),
+                "ip_pool": params.get("ip_pool"),
                 # Sent comma-separated (tags=a,b); the API matches with hasAny.
                 "tags": ",".join(tags) if tags else None,
             },

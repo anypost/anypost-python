@@ -328,6 +328,7 @@ class AsyncEvents:
                 "topic": params.get("topic"),
                 "campaign": params.get("campaign"),
                 "template_id": params.get("template_id"),
+                "ip_pool": params.get("ip_pool"),
                 "tags": ",".join(tags) if tags else None,
             },
         )

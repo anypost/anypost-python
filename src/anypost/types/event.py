@@ -81,9 +81,22 @@ Event = TypedDict(
         "topic": Optional[str],
         # Customer-supplied tags from the originating send. Empty list when none.
         "tags": List[str],
+        # Which dedicated IP pool the message egressed from. None on sends that
+        # named no pool and on accounts without dedicated IPs. Set on every
+        # event for the message, not just email.sent, so bounce and complaint
+        # rates can be read per pool.
+        "ip_pool": Optional[str],
         # SMTP reply code observed. None without an SMTP exchange.
         "smtp_code": Optional[int],
-        # Bounce type (e.g. Hard, Soft). Only on email.bounced.
+        # Why the message failed. Only on email.bounced. One of:
+        #   permanent - the receiver refused the address outright (5xx). The
+        #               address is suppressed; this is what counts against
+        #               list quality.
+        #   transient - a temporary failure still unresolved when the message
+        #               was reported, e.g. an out-of-band 4xx DSN.
+        #   expired   - aged out of the retry queue after 72 hours without
+        #               ever reaching the receiver. Not a hard bounce, and the
+        #               address is not suppressed.
         "bounce_type": Optional[str],
         # Bounce classification (e.g. InvalidRecipient). Only on email.bounced.
         "bounce_classification": Optional[str],
@@ -124,5 +137,10 @@ class EventListParams(ListParams, total=False):
     campaign: str
     #: Template the originating send used.
     template_id: str
+    #: Restrict to mail that egressed from this named dedicated IP pool. Exact
+    #: match against the ``[a-z0-9]([a-z0-9-]*[a-z0-9])?`` pool-name shape; a
+    #: value outside it returns an empty list rather than being ignored, so a
+    #: typo cannot silently widen the answer to "all pools".
+    ip_pool: str
     #: Restrict to events carrying any of these tags (``hasAny``). Up to 10.
     tags: List[str]
