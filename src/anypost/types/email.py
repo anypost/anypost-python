@@ -111,15 +111,43 @@ class BatchItemQueued(TypedDict):
     created_at: str
 
 
-class BatchItemError(TypedDict):
+#: Which per-team label cap denied a batch entry.
+BatchQuotaScope = Literal["campaign_cardinality", "topic_cardinality", "tag_cardinality"]
+
+
+class BatchItemGenericError(TypedDict):
     type: Literal["validation_error", "permission_error", "internal_error"]
     message: str
+
+
+class BatchItemQuotaError(TypedDict):
+    """A label-cap denial, carrying the detail as structured fields.
+
+    Narrow on ``type`` to reach them without parsing ``message``::
+
+        err = item["error"]
+        if err["type"] == "quota_exceeded":
+            park_for(err["retry_after_seconds"])
+    """
+
+    type: Literal["quota_exceeded"]
+    message: str
+    #: Which label cap denied this entry.
+    scope: BatchQuotaScope
+    #: The ceiling for the named ``scope``.
+    limit: int
+    #: Seconds until this entry's label is under its cap again. Entries in one
+    #: batch may report different windows.
+    retry_after_seconds: int
+
+
+#: Inner canonical error: ``{ type, message }``, no wrapping ``error`` key.
+BatchItemError = Union[BatchItemGenericError, BatchItemQuotaError]
 
 
 class BatchItemFailed(TypedDict):
     status: Literal["failed"]
     index: int
-    #: Inner canonical error: ``{ type, message }``, no wrapping ``error`` key.
     error: BatchItemError
 
 

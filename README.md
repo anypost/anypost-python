@@ -129,6 +129,11 @@ print(result["summary"])  # {"total": ..., "queued": ..., "failed": ...}
 for entry in result["data"]:
     if entry["status"] == "queued":
         print(entry["index"], entry["id"])
+    elif entry["error"]["type"] == "quota_exceeded":
+        # A label cap denied this entry. Narrowing on "type" reaches the
+        # denial detail, so there is no need to parse the message.
+        err = entry["error"]
+        retry_after(entry["index"], err["scope"], err["retry_after_seconds"])
     else:
         print(entry["index"], entry["error"]["type"], entry["error"]["message"])
 ```

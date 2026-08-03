@@ -122,6 +122,43 @@ def test_batch_207_does_not_raise() -> None:
     assert rec.last.url.path == "/v1/email/batch"
 
 
+def test_batch_quota_exceeded_entry_carries_structured_denial() -> None:
+    payload = {
+        "summary": {"total": 2, "queued": 1, "failed": 1},
+        "data": [
+            {"status": "queued", "index": 0, "id": "email_1", "created_at": "t"},
+            {
+                "status": "failed",
+                "index": 1,
+                "error": {
+                    "type": "quota_exceeded",
+                    "message": "campaign_cardinality limit 200 exceeded; "
+                    "retry after 1800s",
+                    "scope": "campaign_cardinality",
+                    "limit": 200,
+                    "retry_after_seconds": 1800,
+                },
+            },
+        ],
+    }
+    client, _ = make_client(lambda r: json_response(207, payload))
+    result = client.email.send_batch(
+        {
+            "emails": [
+                {"from": "a@x.com", "to": ["b@y.com"], "subject": "s", "html": "h"},
+                {"from": "a@x.com", "to": ["c@y.com"], "subject": "s", "html": "h"},
+            ]
+        }
+    )
+
+    err = result["data"][1]["error"]
+    # The denial is readable as data; no client needs to regex the message.
+    assert err["type"] == "quota_exceeded"
+    assert err["scope"] == "campaign_cardinality"
+    assert err["limit"] == 200
+    assert err["retry_after_seconds"] == 1800
+
+
 def test_batch_defaults_attachments_encoded() -> None:
     client, rec = make_client(lambda r: json_response(202, {"summary": {}, "data": []}))
     client.email.send_batch(
