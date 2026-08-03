@@ -144,8 +144,11 @@ def test_whoami() -> None:
     body = {
         "team": {"id": "t_1", "name": "Acme"},
         "api_key": {"id": "k", "permissions": "full"},
+        "limits": {"daily": 5000, "monthly": 100000, "delivery_rate_per_minute": 600},
     }
     client, rec = make_client(lambda r: json_response(200, body))
     me = client.whoami()
     assert me["team"]["name"] == "Acme"
+    assert me["limits"]["daily"] == 5000
+    assert me["limits"]["delivery_rate_per_minute"] == 600
     assert rec.last.url.path == "/v1/whoami"

@@ -37,7 +37,7 @@ from .email import (
     SendResponse,
 )
 from .event import Event, EventBot, EventListParams, EventTracking, EventType
-from .identity import WhoamiResponse
+from .identity import WhoamiLimits, WhoamiResponse
 from .suppression import (
     Suppression,
     SuppressionCreateParams,
@@ -96,6 +96,7 @@ __all__ = [
     "EventListParams",
     "EventTracking",
     "EventType",
+    "WhoamiLimits",
     "WhoamiResponse",
     "Suppression",
     "SuppressionCreateParams",
