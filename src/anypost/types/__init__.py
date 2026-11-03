@@ -44,6 +44,9 @@ from .event import Event, EventBot, EventListParams, EventTracking, EventType
 from .identity import WhoamiLimits, WhoamiResponse
 from .suppression import (
     Suppression,
+    SuppressionBatchInvalid,
+    SuppressionBatchItem,
+    SuppressionBatchResult,
     SuppressionCreateParams,
     SuppressionListParams,
     SuppressionOrigin,
@@ -107,6 +110,9 @@ __all__ = [
     "WhoamiLimits",
     "WhoamiResponse",
     "Suppression",
+    "SuppressionBatchInvalid",
+    "SuppressionBatchItem",
+    "SuppressionBatchResult",
     "SuppressionCreateParams",
     "SuppressionListParams",
     "SuppressionOrigin",

@@ -9,6 +9,8 @@ from .._http import HttpClient
 from .._pagination import Page
 from ..types.suppression import (
     Suppression,
+    SuppressionBatchItem,
+    SuppressionBatchResult,
     SuppressionCreateParams,
     SuppressionListParams,
 )
@@ -23,7 +25,7 @@ class Suppressions:
     def list(
         self, params: Optional[SuppressionListParams] = None
     ) -> Page[Suppression]:
-        """List the team's suppressions, newest-first. Expired rows are filtered out.
+        """List the team's suppressions, newest-first.
 
         Filter with ``email_contains``, ``topic``, ``reason``, and ``origin``.
         """
@@ -33,9 +35,24 @@ class Suppressions:
         """Add a manual suppression.
 
         Defaults to topic ``*`` (every topic). Raises ``validation_error`` if
-        an active entry for the same ``(email, topic)`` exists.
+        an entry for the same ``(email, topic)`` exists.
         """
         return self._http.request("POST", "/suppressions", body=params)
+
+    def create_batch(
+        self, suppressions: List[SuppressionBatchItem]
+    ) -> SuppressionBatchResult:
+        """Add up to 1,000 suppressions in one request.
+
+        Entries that are already suppressed are counted in ``already_suppressed``
+        and left unchanged, so a batch is safe to retry. Invalid addresses come
+        back in ``invalid`` instead of failing the batch. Raises
+        ``validation_error`` (422) if the batch would pass the team's
+        suppression limit; nothing is added in that case.
+        """
+        return self._http.request(
+            "POST", "/suppressions/batch", body={"suppressions": suppressions}
+        )
 
     def get(self, email: str, topic: str) -> Suppression:
         """Retrieve the suppression for an ``(email, topic)`` pair.

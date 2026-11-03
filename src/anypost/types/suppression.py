@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import List, Optional
 
 from typing_extensions import Literal, NotRequired, TypedDict
 
@@ -36,7 +36,8 @@ class Suppression(TypedDict):
     note: Optional[str]
     #: When the suppression was first observed.
     suppressed_at: str
-    #: When it stops applying. ``None`` means never. Permanent bounces roll off after 90 days.
+    #: Always ``None``: suppressions do not expire. Kept for compatibility and
+    #: will be removed in a future major version.
     expires_at: Optional[str]
     created_at: str
 
@@ -60,3 +61,40 @@ class SuppressionCreateParams(TypedDict):
     topic: NotRequired[str]
     #: Optional internal annotation, preserved across automatic re-suppressions.
     note: NotRequired[Optional[str]]
+
+
+class SuppressionBatchItem(TypedDict):
+    """One entry in a ``suppressions.create_batch`` call."""
+
+    email: str
+    #: Topic to scope the suppression. Omit for ``*`` (every topic).
+    topic: NotRequired[str]
+    #: Free-form. ``permanent_bounce``, ``complaint``, ``unsubscribed``, and
+    #: ``manual`` are recognized, as are common aliases such as ``bounce``,
+    #: ``hard bounce``, ``spam report``, and ``opt-out`` (case and punctuation
+    #: ignored). Anything else records ``manual``.
+    reason: NotRequired[str]
+    #: Optional internal annotation (max 2000 characters).
+    note: NotRequired[Optional[str]]
+
+
+class SuppressionBatchInvalid(TypedDict):
+    """An item in a batch whose email is not a valid address."""
+
+    #: Position in the request array, 0-based.
+    index: int
+    email: Optional[str]
+
+
+class SuppressionBatchResult(TypedDict):
+    """Response from ``POST /suppressions/batch``.
+
+    ``imported + already_suppressed + len(invalid)`` equals the items sent.
+    """
+
+    #: Suppressions this call created.
+    imported: int
+    #: Items whose address and topic were already suppressed, including repeats
+    #: within the batch. Left unchanged.
+    already_suppressed: int
+    invalid: List[SuppressionBatchInvalid]
