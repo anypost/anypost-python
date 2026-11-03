@@ -140,6 +140,30 @@ def test_suppressions_compound_and_email_paths() -> None:
     assert rec.last.url.path == "/v1/suppressions/user@example.com"
 
 
+def test_suppressions_create_batch() -> None:
+    result_body = {
+        "imported": 1,
+        "already_suppressed": 0,
+        "invalid": [{"index": 1, "email": "not-an-address"}],
+    }
+    client, rec = make_client(lambda r: json_response(200, result_body))
+    result = client.suppressions.create_batch(
+        [
+            {"email": "alice@example.com", "topic": "marketing", "reason": "hard bounce"},
+            {"email": "not-an-address"},
+        ]
+    )
+    assert (rec.last.method, rec.last.url.path) == ("POST", "/v1/suppressions/batch")
+    assert rec.body() == {
+        "suppressions": [
+            {"email": "alice@example.com", "topic": "marketing", "reason": "hard bounce"},
+            {"email": "not-an-address"},
+        ]
+    }
+    assert result["imported"] == 1
+    assert result["invalid"] == [{"index": 1, "email": "not-an-address"}]
+
+
 def test_whoami() -> None:
     body = {
         "team": {"id": "t_1", "name": "Acme"},

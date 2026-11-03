@@ -201,6 +201,18 @@ client.suppressions.create({
 client.suppressions.delete("alice@example.com", "marketing")
 ```
 
+Import many at once with `create_batch` (up to 1,000 per call):
+
+```python
+result = client.suppressions.create_batch([
+    {"email": "alice@example.com", "topic": "marketing", "reason": "hard bounce"},
+    {"email": "bob@example.com"},
+])
+print(result["imported"], result["already_suppressed"], result["invalid"])
+```
+
+Addresses that are already suppressed are counted in `already_suppressed` and left unchanged, so a batch is safe to retry; invalid addresses come back in `invalid` instead of failing the call. Suppressions do not expire.
+
 `get`, `list` (with `email_contains`, `topic`, `reason`, and `origin` filters), `list_for_email`, and `delete_for_email` round out the resource. See [Suppressions](https://anypost.com/docs/reference/suppressions) for scoping and the automatic-suppression rules for bounces and complaints.
 
 ## Webhooks

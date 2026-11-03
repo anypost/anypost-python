@@ -21,6 +21,8 @@ from ..types.event import Event, EventListParams
 from ..types.identity import WhoamiResponse
 from ..types.suppression import (
     Suppression,
+    SuppressionBatchItem,
+    SuppressionBatchResult,
     SuppressionCreateParams,
     SuppressionListParams,
 )
@@ -218,6 +220,13 @@ class AsyncSuppressions:
 
     async def create(self, params: SuppressionCreateParams) -> Suppression:
         return await self._http.request("POST", "/suppressions", body=params)
+
+    async def create_batch(
+        self, suppressions: List[SuppressionBatchItem]
+    ) -> SuppressionBatchResult:
+        return await self._http.request(
+            "POST", "/suppressions/batch", body={"suppressions": suppressions}
+        )
 
     async def get(self, email: str, topic: str) -> Suppression:
         return await self._http.request(

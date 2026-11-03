@@ -102,3 +102,13 @@ async def test_async_exhausts_retries(no_sleep: List[float]) -> None:
         await client.email.send({"from": "a@x.com", "to": ["b@y.com"], "text": "t"})
     assert len(rec.requests) == 2
     await client.aclose()
+
+
+async def test_async_suppressions_create_batch() -> None:
+    body = {"imported": 1, "already_suppressed": 0, "invalid": []}
+    client, rec = make_async_client(lambda r: json_response(200, body))
+    result = await client.suppressions.create_batch([{"email": "alice@example.com"}])
+    assert (rec.last.method, rec.last.url.path) == ("POST", "/v1/suppressions/batch")
+    assert rec.body() == {"suppressions": [{"email": "alice@example.com"}]}
+    assert result["imported"] == 1
+    await client.aclose()
